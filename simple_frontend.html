@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding Photo Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #000047;
+            --light-navy: #0000a7;
+            --lightest-navy: #e6e6ff;
+        }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, white, var(--lightest-navy));
+            min-height: 100vh;
+        }
+        h1, h2, h3 {
+            font-family: 'Playfair Display', serif;
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .loading {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0,0,71,0.2);
+            border-radius: 50%;
+            border-top-color: var(--navy);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .navy-button {
+            background-color: var(--navy);
+            transition: all 0.3s ease;
+        }
+        .navy-button:hover {
+            background-color: var(--light-navy);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 71, 0.1);
+        }
+        .card {
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 71, 0.1);
+        }
+        .range-slider {
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, #ccc, var(--navy));
+            outline: none;
+        }
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--navy);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-12 relative">
+        <div class="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-white to-transparent opacity-70 z-0"></div>
+        <header class="text-center mb-12 relative z-10">
+            <h1 class="text-5xl font-bold mb-3" style="color: var(--navy);">Wedding Photo Finder</h1>
+            <div class="w-32 h-1 mx-auto rounded-full mb-4" style="background: linear-gradient(to right, white, var(--navy), white);"></div>
+            <p class="text-gray-600 text-lg">Find all your special moments from our wedding collection</p>
+        </header>
+
+        <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden mb-12 card">
+            <div class="p-8">
+                <h2 class="text-2xl font-semibold mb-4" style="color: var(--navy);">Upload Your Selfie</h2>
+                <p class="text-gray-600 mb-8">We'll find all the photos you appear in</p>
+                
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-medium mb-2" for="selfie">
+                        Choose a photo of yourself
+                    </label>
+                    <input
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:ring-navy"
+                        type="file"
+                        id="selfie"
+                        accept="image/*"
+                    >
+                </div>
+                
+                <div class="mb-8">
+                    <label class="block text-gray-700 font-medium mb-2" for="threshold">
+                        Match Sensitivity: <span id="thresholdValue" class="font-semibold" style="color: var(--navy);">0.8</span>
+                    </label>
+                    <input
+                        class="w-full range-slider"
+                        type="range"
+                        id="threshold"
+                        min="0.5"
+                        max="0.95"
+                        step="0.05"
+                        value="0.8"
+                        oninput="document.getElementById('thresholdValue').textContent = this.value"
+                    >
+                    <div class="flex justify-between text-sm mt-2">
+                        <span class="text-gray-500">More Results</span>
+                        <span class="text-gray-500">Better Matches</span>
+                    </div>
+                </div>
+                
+                <button
+                    id="findBtn"
+                    class="w-full navy-button text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition duration-300"
+                >
+                    Find My Photos
+                </button>
+            </div>
+        </div>
+
+        <div id="loadingSection" class="hidden text-center py-16">
+            <div class="loading mx-auto mb-6"></div>
+            <p class="text-gray-600 text-lg">Analyzing your photo and finding matches...</p>
+        </div>
+
+        <div id="resultsSection" class="hidden">
+            <h2 class="text-3xl font-semibold mb-4" style="color: var(--navy);">Your Photos</h2>
+            <p id="matchCount" class="text-gray-600 text-lg mb-8"></p>
+            
+            <div id="photoGrid" class="photo-grid"></div>
+        </div>
+
+        <div id="noResultsSection" class="hidden text-center py-16">
+            <svg class="w-20 h-20 mx-auto mb-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-gray-600 text-lg">No photos found. Try adjusting the sensitivity or using a different selfie.</p>
+        </div>
+    </div>
+
+    <script>
+        // API endpoint
+        const API_URL = 'http://localhost:8000';
+
+        document.getElementById('findBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('selfie');
+            const threshold = document.getElementById('threshold').value;
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a photo first');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loadingSection').classList.remove('hidden');
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('noResultsSection').classList.add('hidden');
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('threshold', threshold);
+            formData.append('limit', 1000); // Increased limit to get all matches
+            
+            try {
+                const response = await fetch(`${API_URL}/upload_selfie`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // Hide loading
+                document.getElementById('loadingSection').classList.add('hidden');
+                
+                if (data.success && data.matches && data.matches.length > 0) {
+                    // Show results
+                    document.getElementById('resultsSection').classList.remove('hidden');
+                    document.getElementById('matchCount').textContent = `Found ${data.match_count} photos with you in them`;
+                    
+                    const photoGrid = document.getElementById('photoGrid');
+                    photoGrid.innerHTML = '';
+                    
+                    data.matches.forEach(match => {
+                        const photoCard = document.createElement('div');
+                        photoCard.className = 'bg-white rounded-xl shadow-md overflow-hidden card';
+                        
+                        // Extract Drive ID
+                        const driveId = match.photo_url.match(/\/d\/(.+?)\/view/);
+                        
+                        if (driveId && driveId[1]) {
+                            // Create an iframe for Google Drive preview instead of an img
+                            const iframe = document.createElement('iframe');
+                            iframe.src = `https://drive.google.com/file/d/${driveId[1]}/preview`;
+                            iframe.width = '100%';
+                            iframe.height = '240';
+                            iframe.frameBorder = '0';
+                            iframe.allowFullscreen = true;
+                            iframe.className = 'w-full';
+                            photoCard.appendChild(iframe);
+                        } else {
+                            // Fallback to regular img if not a Drive URL
+                            const img = document.createElement('img');
+                            img.src = match.photo_url;
+                            img.className = 'w-full h-60 object-cover';
+                            img.alt = 'Wedding photo';
+                            photoCard.appendChild(img);
+                        }
+                        
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'p-4';
+                        
+                        const similarity = document.createElement('p');
+                        const confidenceValue = Math.round(match.similarity * 100);
+                        similarity.className = 'text-sm font-medium';
+                        similarity.style.color = 'var(--navy)';
+                        similarity.textContent = `Match confidence: ${confidenceValue}%`;
+                        
+                        // Add a confidence bar
+                        const confidenceBar = document.createElement('div');
+                        confidenceBar.className = 'w-full h-2 bg-gray-200 rounded-full mt-2';
+                        
+                        const confidenceFill = document.createElement('div');
+                        confidenceFill.className = 'h-full rounded-full';
+                        confidenceFill.style.width = `${confidenceValue}%`;
+                        confidenceFill.style.backgroundColor = 'var(--navy)';
+                        
+                        confidenceBar.appendChild(confidenceFill);
+                        
+                        infoDiv.appendChild(similarity);
+                        infoDiv.appendChild(confidenceBar);
+                        photoCard.appendChild(infoDiv);
+                        photoGrid.appendChild(photoCard);
+                    });
+                } else {
+                    // Show no results
+                    document.getElementById('noResultsSection').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+                document.getElementById('loadingSection').classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
